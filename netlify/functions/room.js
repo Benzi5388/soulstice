@@ -52,9 +52,33 @@ const RESULT_SCHEMA = {
   additionalProperties: false
 };
 
+/* Use Netlify Blobs in production. In local `netlify dev` without a linked
+   site, Blobs isn't configured — fall back to an in-memory store so local
+   testing works. (The dev function process persists between requests, so a
+   room created in one tab is visible to another during the session.) */
+let __memStore = null;
+function roomStore() {
+  try {
+    return getStore(STORE);
+  } catch (e) {
+    if (!__memStore) {
+      const m = new Map();
+      __memStore = {
+        async get(key, opts) {
+          if (!m.has(key)) return null;
+          const v = m.get(key);
+          return (opts && opts.type === "json") ? JSON.parse(JSON.stringify(v)) : v;
+        },
+        async setJSON(key, val) { m.set(key, JSON.parse(JSON.stringify(val))); }
+      };
+    }
+    return __memStore;
+  }
+}
+
 const clamp = (s) => String(s == null ? "" : s).slice(0, MAX_ANSWER_LEN);
 const cleanName = (s) => String(s == null ? "" : s).trim().slice(0, 24);
-const cleanAvatar = (s) => String(s == null ? "✦" : s).slice(0, 4) || "✦";
+const cleanAvatar = (s) => String(s == null ? "" : s).slice(0, 40) || "soul";
 
 function makeCode() {
   let c = "";
@@ -94,7 +118,7 @@ export const handler = async (event) => {
   catch (e) { return json(400, { error: "Invalid JSON body" }); }
 
   const action = body.action;
-  const store = getStore(STORE);
+  const store = roomStore();
 
   try {
     if (action === "create") {
@@ -185,7 +209,7 @@ async function maybeCompute(store, code) {
 
   let result;
   try { result = await claudeReading(room); }
-  catch (e) { result = localReading(room); }
+  catch (e) { console.error("[soulstice] claude failed:", e && (e.stack || e.message)); result = localReading(room); }
 
   const fresh = await store.get(code, { type: "json" }) || room;
   fresh.result = result;
@@ -203,15 +227,15 @@ function buildPrompt(room) {
     lines.push(`UNIVERSE ${i + 1}: "${sc.name}" — ${sc.desc}`);
     lines.push(`  Question (self): ${sc.self}`);
     lines.push(`  Question (predict partner): ${sc.predict}`);
-    lines.push(`  ${A.name} (${A.avatar}) answered about themselves: "${a.self || "(left blank)"}"`);
+    lines.push(`  ${A.name} answered about themselves: "${a.self || "(left blank)"}"`);
     lines.push(`  ${A.name} predicted ${B.name} would say: "${a.predict || "(left blank)"}"`);
-    lines.push(`  ${B.name} (${B.avatar}) answered about themselves: "${b.self || "(left blank)"}"`);
+    lines.push(`  ${B.name} answered about themselves: "${b.self || "(left blank)"}"`);
     lines.push(`  ${B.name} predicted ${A.name} would say: "${b.predict || "(left blank)"}"`);
     lines.push("");
   });
   return `You are the Oracle of Soulstice — a poetic, emotionally intelligent reader of human bonds across the multiverse.
 
-Two souls, ${A.name} (${A.avatar}) and ${B.name} (${B.avatar}), have travelled through ten alternate universes. In each, they answered a question about themselves AND predicted what their partner would say. Compatibility lives in how well their self-answers resonate with each other AND how accurately each predicted the other.
+Two souls, ${A.name} and ${B.name}, have travelled through ten alternate universes. In each, they answered a question about themselves AND predicted what their partner would say. Compatibility lives in how well their self-answers resonate with each other AND how accurately each predicted the other.
 
 Here is everything they revealed:
 

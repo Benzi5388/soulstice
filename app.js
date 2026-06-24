@@ -21,16 +21,23 @@ const SCENARIOS = [
 ];
 
 const SCENE_EMOJI = ["🏝️","🍷","🌍","💎","⏳","🐱","🚀","🔄","👑","👻"];
-const AVATARS = ["🌙","⭐","🪐","☄️","🌠","💫","🌌","✨","🌟","🔮","🛸","🌖"];
+
+/* Human avatars: illustrated people from DiceBear, seeded per player so each
+   person gets a distinct face. Just an image URL — no backend. Falls back to a
+   🧑 glyph if the image can't load (offline). */
+const AVATAR_STYLE = "adventurer";
+const avatarUrl = (seed) => `https://api.dicebear.com/9.x/${AVATAR_STYLE}/svg?seed=${encodeURIComponent(seed || "soul")}&backgroundColor=transparent`;
+const avatarImg = (seed) => `<img class="av-img" src="${avatarUrl(seed)}" alt="" draggable="false" onerror="this.replaceWith(document.createTextNode('🧑'))" />`;
+const newSeed = () => Math.random().toString(36).slice(2, 10);
 
 /* ---------- Global state (in memory) ---------- */
 const state = {
-  me: { name: "", avatar: "🌙" },
-  partner: null,            // { name, avatar }
+  me: { name: "", avatar: "" },   // avatar = a seed string
+  partner: null,                  // { name, avatar }
   code: "",
-  role: "",                 // 'host' | 'guest'
+  role: "",                       // 'host' | 'guest'
   scene: 0,
-  answers: [],              // [{self, predict}] for me
+  answers: [],                    // [{self, predict}] for me
   submitted: false,
   result: null,
   pollTimer: null
@@ -40,7 +47,6 @@ const state = {
 const app = document.getElementById('app');
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const randAvatar = (exclude) => { let a; do { a = AVATARS[Math.floor(Math.random() * AVATARS.length)]; } while (a === exclude && AVATARS.length > 1); return a; };
 const partnerLabel = () => esc(state.partner && state.partner.name ? state.partner.name : 'your partner');
 
 /* ---------- Networking ---------- */
@@ -52,9 +58,6 @@ async function api(action, payload = {}) {
   let data = null;
   try { data = await res.json(); } catch (e) {}
   if (!res.ok) {
-    // The function returns JSON with an `error` field. If we get a non-OK
-    // response with no JSON error, /api/room isn't running (e.g. plain static
-    // server) — treat it as the backend being unavailable.
     if (data && data.error) throw new Error(data.error);
     throw new Error('offline');
   }
@@ -145,12 +148,12 @@ function buildNameScreen() {
       </div>
 
       <div class="name-card reveal-up d3" data-tilt>
-        <div class="avatar" data-roll title="Tap for a new avatar">${state.me.avatar}</div>
+        <div class="avatar" data-roll title="Tap for a new face">${avatarImg(state.me.avatar)}</div>
         <div class="name-field">
           <label>Your Name</label>
           <input id="meName" type="text" maxlength="22" placeholder="Enter your name" autocomplete="off" />
         </div>
-        <button class="reroll" data-roll title="New avatar" aria-label="Reroll avatar">⟳</button>
+        <button class="reroll" data-roll title="New face" aria-label="New avatar">⟳</button>
       </div>
 
       <div class="reveal-up d4">
@@ -175,8 +178,8 @@ function buildNameScreen() {
   codeInput.addEventListener('input', () => { codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
 
   s.querySelectorAll('[data-roll]').forEach(btn => btn.addEventListener('click', () => {
-    state.me.avatar = randAvatar(state.me.avatar);
-    const av = $('.avatar', s); av.textContent = state.me.avatar;
+    state.me.avatar = newSeed();
+    const av = $('.avatar', s); av.innerHTML = avatarImg(state.me.avatar);
     av.classList.remove('pop'); void av.offsetWidth; av.classList.add('pop');
   }));
 
@@ -210,23 +213,33 @@ function buildNameScreen() {
 }
 
 /* ============================================================
-   SCREEN: lobby (room code + partner status)
+   SCREEN: lobby (room code + avatars + partner status)
    ============================================================ */
 function buildLobby() {
   const isHost = state.role === 'host';
+  const me = state.me;
   const s = mount('screen-lobby', `
-    <div class="center-stack">
+    <div class="center-stack compact">
       <div class="eyebrow reveal-up d1">Your Room</div>
+
+      <div class="bond reveal-up d1" style="margin:2px 0 2px;">
+        <div class="person"><div class="big-av">${avatarImg(me.avatar)}</div><div class="pn">${esc(me.name)}</div></div>
+        <div class="link-line"></div>
+        <div class="person"><div class="big-av" id="partnerAv" style="opacity:.4;">✦</div><div class="pn" id="partnerName" style="color:var(--ink-faint);">…</div></div>
+      </div>
+
       <div class="room-code-box reveal-up d2">
-        <div class="room-code" id="roomCode">${esc(state.code)}</div>
+        <div class="room-code">${esc(state.code)}</div>
         <button class="copy-code" id="copyCode">Copy code</button>
       </div>
+
       <div class="lobby-status reveal-up d3" id="lobbyStatus"><span class="status-dot"></span> <span class="lobby-text">…</span></div>
-      <p class="tagline reveal-up d4">${isHost
-        ? 'Send this code to your partner. They tap <b>Join</b> and type it in — then you each answer on your own phone, no need to be together.'
+
+      <p class="tagline reveal-up d4" style="font-size:1rem;">${isHost
+        ? 'Send this code to your partner. They tap <b>Join</b> and type it in — then you each answer on your own phone.'
         : 'You’re in! You can each answer on your own phone, whenever you like.'}</p>
-      <button class="btn btn-glow reveal-up d5" id="beginBtn">Begin My Answers ✦</button>
-      <div class="footnote reveal-up d6">Traveling as <span>${esc(state.me.avatar)} ${esc(state.me.name)}</span></div>
+
+      <div class="reveal-up d5"><button class="btn btn-glow" id="beginBtn">Begin My Answers ✦</button></div>
     </div>
   `);
 
@@ -246,20 +259,23 @@ function buildLobby() {
   const setStatus = () => {
     const el = $('#lobbyStatus', s); if (!el) return;
     const txt = $('.lobby-text', el);
+    const pav = $('#partnerAv', s), pnm = $('#partnerName', s);
     if (state.partner && state.partner.name) {
       el.className = 'lobby-status joined reveal-up d3';
-      txt.textContent = `${state.partner.avatar} ${state.partner.name} has joined ✦`;
+      txt.textContent = `${state.partner.name} has joined ✦`;
+      if (pav) { pav.innerHTML = avatarImg(state.partner.avatar); pav.style.opacity = '1'; }
+      if (pnm) { pnm.textContent = state.partner.name; pnm.style.color = 'var(--ink)'; }
     } else if (isHost) {
       el.className = 'lobby-status live reveal-up d3';
       txt.textContent = 'Waiting for your partner to join…';
+      if (pnm) pnm.textContent = 'Waiting…';
     } else {
       el.className = 'lobby-status joined reveal-up d3';
-      txt.textContent = 'Connected to the room ✦';
+      txt.textContent = 'Connected ✦';
     }
   };
   setStatus();
 
-  // Poll so the host sees the partner join in real time.
   startPoll(async () => {
     try {
       const r = await api('status', { code: state.code });
@@ -277,7 +293,7 @@ function buildQuizScreen() {
   const s = mount('screen-quiz', `
     <div class="quiz-top">
       <div class="quiz-bar-row">
-        <div class="mini-av">${esc(state.me.avatar)}</div>
+        <div class="mini-av">${avatarImg(state.me.avatar)}</div>
         <div class="progress-wrap">
           <div class="progress-label"><span>${esc(state.me.name)}</span><span><span id="qcount">Universe 1 of 10</span> · <span class="pct" id="qpct">0%</span></span></div>
           <div class="progress-track"><div class="progress-fill" id="qfill"></div></div>
@@ -344,7 +360,6 @@ function renderScene() {
     save();
     updateProgress(s, state.scene + 1);
     if (!isLast) { state.scene++; setTimeout(renderScene, 130); return; }
-    // Submit my answers, then wait for partner.
     buildWaitScreen();
     showScreen('screen-wait');
     submitAndWait();
@@ -375,7 +390,6 @@ function setWait(main, sub) {
 
 async function submitAndWait() {
   state.submitted = false;
-  // 1) submit (retry a couple times on transient errors)
   for (let attempt = 0; attempt < 3 && !state.submitted; attempt++) {
     try {
       const r = await api('submit', { code: state.code, role: state.role, answers: state.answers });
@@ -383,11 +397,10 @@ async function submitAndWait() {
       partnerFrom(r.view);
       if (r.view.ready) { finishWithResult(r.view.result); return; }
     } catch (e) {
-      if (attempt === 2) { setWait('The connection wavered…', 'Retrying shortly'); }
+      if (attempt === 2) setWait('The connection wavered…', 'Retrying shortly');
       await new Promise(res => setTimeout(res, 1200));
     }
   }
-  // 2) poll until the reading is ready
   startPoll(async () => {
     try {
       const r = await api('status', { code: state.code });
@@ -429,14 +442,14 @@ function normalizeResult(r) {
    ============================================================ */
 function buildRevealScreen() {
   const me = state.me;
-  const partner = state.partner || { name: 'Your partner', avatar: '✦' };
+  const partner = state.partner || { name: 'Your partner', avatar: 'partner' };
   const s = mount('screen-reveal', `
     <div class="eyebrow reveal-up d1" style="margin-bottom:14px;">The Multiverse has spoken</div>
 
     <div class="bond reveal-up d1">
-      <div class="person"><div class="big-av">${esc(me.avatar)}</div><div class="pn">${esc(me.name)}</div></div>
+      <div class="person"><div class="big-av">${avatarImg(me.avatar)}</div><div class="pn">${esc(me.name)}</div></div>
       <div class="link-line"></div>
-      <div class="person"><div class="big-av">${esc(partner.avatar)}</div><div class="pn">${esc(partner.name)}</div></div>
+      <div class="person"><div class="big-av">${avatarImg(partner.avatar)}</div><div class="pn">${esc(partner.name)}</div></div>
     </div>
 
     <div class="score-zone reveal-up d2">
@@ -506,8 +519,8 @@ function buildUniverseRows(r) {
 
 /* ---------- Share ---------- */
 function shareResult() {
-  const r = state.result, me = state.me, partner = state.partner || { name: 'Partner', avatar: '✦' };
-  const text = `✦ Soulstice ✦\n${me.avatar} ${me.name} & ${partner.name} ${partner.avatar}\nCompatibility: ${r.score}/10\n\n"${r.closingLine}"\n\n— read across ten universes`;
+  const r = state.result, me = state.me, partner = state.partner || { name: 'Partner' };
+  const text = `✦ Soulstice ✦\n${me.name} & ${partner.name}\nCompatibility: ${r.score}/10\n\n"${r.closingLine}"\n\n— read across ten universes`;
   const done = () => toast('Copied to clipboard ✦');
   if (navigator.share) navigator.share({ title: 'Soulstice', text }).catch(() => copyText(text, done));
   else copyText(text, done);
@@ -699,7 +712,7 @@ musicBtn.addEventListener('click', () => { musicArmed = true; toggleMusic(); });
 function init() {
   initStars();
   drawStars();
-  state.me.avatar = randAvatar();
+  state.me.avatar = newSeed();
   buildNameScreen();
   showScreen('screen-name');
 }

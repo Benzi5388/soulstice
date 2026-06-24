@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0a0618" />
+<title>Soulstice — A Journey Through the Multiverse</title>
+
+<!-- Elegant Google Fonts — Cormorant Garamond + Inter -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- Ambient layers (back to front) -->
+<div class="aurora" aria-hidden="true"></div>
+<canvas id="starfield" aria-hidden="true"></canvas>
+<div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<!-- Floating control: ambient music toggle -->
+<div class="float-controls">
+  <button class="ctl" id="musicBtn" title="Ambient sound" aria-label="Toggle ambient sound"><span class="eq"><i></i><i></i><i></i></span></button>
+</div>
+
+<div id="app"></div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

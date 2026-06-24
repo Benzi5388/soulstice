@@ -1,0 +1,17 @@
+# Soulstice — Netlify config
+# Static site + one serverless function (room.js) that links two devices
+# via Netlify Blobs and calls Claude server-side. No build step.
+# Set ANTHROPIC_API_KEY in Site settings → Environment variables.
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Pretty URL the front-end calls for everything (create/join/submit/status)
+[[redirects]]
+  from = "/api/room"
+  to = "/.netlify/functions/room"
+  status = 200

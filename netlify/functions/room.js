@@ -27,16 +27,16 @@ const CODE_LEN = 5;
 /* Scenario text lives here so the prompt is built authoritatively
    server-side. Must stay in sync with app.js SCENARIOS order. */
 const SCENARIOS = [
-  { name: "The Lost Island", desc: "Your plane goes down. Just the two of you, an endless ocean, and a single coconut.", self: "What is the very first thing you do once you realize you're stranded together?", predict: "What do you think THEY said they'd do first?" },
-  { name: "Rival Chefs of 1920s Paris", desc: "Two legendary kitchens. One Michelin star. You are sworn culinary enemies.", self: "What's the secret dish you'd unveil to crush the competition?", predict: "What signature dish do you think THEY chose to defeat you?" },
-  { name: "The Last Two Humans", desc: "Earth is silent. You are, as far as you know, the only two people left alive.", self: "Where on Earth do you decide to rebuild, and why there?", predict: "Where do you think THEY wanted to start over?" },
-  { name: "Heist of the Floating Casino", desc: "A diamond the size of a fist orbits the moon in a velvet-lined vault. You're the crew.", self: "What's your role in the heist — and what's your getaway plan?", predict: "What role do you think THEY claimed for themselves?" },
-  { name: "Soulmates in Reverse", desc: "You meet at the end of your lives and grow younger together until you're strangers.", self: "What is the one memory you'd fight hardest to keep as time unwinds?", predict: "Which memory do you think THEY refused to let go of?" },
-  { name: "The Talking Cat Tribunal", desc: "Cats now rule Earth. You both stand accused of an unspeakable crime: being late to feed them.", self: "What's your impassioned defense before the Supreme Feline Court?", predict: "What ridiculous excuse do you think THEY tried to give the cats?" },
-  { name: "Astronauts, Drifting", desc: "Your tether snaps. Oxygen for twenty minutes. Just two voices and the vast dark.", self: "What's the last thing you'd want to say to them out here?", predict: "What do you think THEY would say to you in those final minutes?" },
-  { name: "The Body Swap", desc: "You wake up in each other's bodies. You have one day before it might become permanent.", self: "What's the first thing you'd do with their body that they'd absolutely hate?", predict: "What mischief do you think THEY got up to in YOUR body?" },
-  { name: "Monarchs of a Tiny Kingdom", desc: "You jointly rule a nation of 14 citizens, 3 goats, and one very dramatic swan.", self: "What's the first royal law you'd pass for the good of the realm?", predict: "What law do you think THEY decreed first?" },
-  { name: "Ghosts in the Same House", desc: "You both haunt one creaky old mansion for eternity. The living keep moving in.", self: "How do you spend your endless nights — and how do you scare the newcomers?", predict: "How do you think THEY chose to haunt the place?" }
+  { name: "The Signal", desc: "You're both stranded on different planets. You sent an important transmission. They received it. It's been 3 hours. No reply.", self: "What are you doing right now?", predict: "What are THEY doing right now?", options: ["😤 Drafted four follow-ups and deleted them all", "😌 Completely unbothered — they'll reply when they reply", "📡 Already tried calling. Twice.", "🕵️ Checking their last active signal to see if they're online"] },
+  { name: "The Wrong Turn", desc: "You're both in a spaceship. Navigation says go right. Your gut says left. You went left. Now you're completely lost in deep space.", self: "What happens next?", predict: "How did THEY react?", options: ["😶 Complete silence. Both staring at the controls.", "😂 Already laughing about it", "🗣️ \"I literally told you.\"", "🔄 Pretending to recalculate like it was the plan all along"] },
+  { name: "The Contraband", desc: "You smuggled something unnecessary onto the ship. They found it in the cargo bay.", self: "Your move?", predict: "What's THEIR move?", options: ["🙈 \"I've had this since before the mission, what are you talking about\"", "💸 Immediately justify it with a 5-point argument", "😇 Come clean immediately — I cannot lie to save my life", "🛒 \"Okay but also look what THEY smuggled last week\""] },
+  { name: "The Unfinished Argument", desc: "You both went into cryo-sleep mid-argument. You just woke up. 10 years later. They're looking at you.", self: "What do you do?", predict: "What do THEY do?", options: ["😤 Pick up exactly where we left off", "😂 Laugh. We really did that.", "😶 Pretend it never happened", "💬 \"So... do you want to talk about it?\""] },
+  { name: "The Repeat", desc: "You've explained the mission plan three times already. They just commed you asking the same question again.", self: "What do you do?", predict: "What do THEY do?", options: ["😤 Answer — but they're absolutely hearing about this later", "😂 Laugh, because at this point it's just funny", "😶 Answer calmly. Deep breaths. It's fine.", "📡 Send them the recording of the last three times"] },
+  { name: "The Mood", desc: "Something is clearly wrong with them. The whole ship can feel it. You asked. They said fine. It is not fine.", self: "What do you do?", predict: "What do THEY do?", options: ["🫂 Ask again. I'm not leaving it at 'fine'.", "😶 Respect it. They'll talk when they're ready.", "😤 Fine. If they're fine, then I'm fine.", "💬 Don't ask again, but stay close just in case"] },
+  { name: "The Eavesdrop", desc: "You weren't meant to hear what they said about you to someone else on the crew. But you did. They have no idea.", self: "What do you do?", predict: "What do THEY do?", options: ["😶 Pretend I heard nothing. Carry on.", "💬 Bring it up directly. Right now.", "🤐 Hold it in. Let it quietly eat me alive.", "😏 Start acting slightly different and wait for them to notice"] },
+  { name: "Actually, Never Mind", desc: "You're in different galaxies. They sent: \"we need to talk.\" You've been spiralling for 20 minutes. Next message: \"actually never mind.\"", self: "What do you do?", predict: "What do THEY do?", options: ["😤 \"No. We're talking. Right now.\"", "😶 Pretend I'm fine. Internally on fire.", "😂 Laugh it off — but bring it up again later", "🚀 Go silent and wait for them to come to me"] },
+  { name: "The Public Correction", desc: "You're both delegates at an intergalactic council. You said something. They corrected you in front of every alien species in the room. The chamber went silent.", self: "What happens next?", predict: "How do THEY react?", options: ["😤 I correct their correction. Immediately.", "😶 Smile and die a little inside", "😂 Laugh it off — but we are discussing this later", "🗣️ Call it out right there. In front of everyone."] },
+  { name: "The Hologram", desc: "You're telling them something important via hologram. You can see they're distracted. You're still talking.", self: "What do you do?", predict: "What do THEY do?", options: ["😤 Stop transmitting completely and wait", "😶 Finish the story to nobody", "🗣️ \"Are you even listening to me?\"", "📡 Go offline. Two can play."] }
 ];
 
 const RESULT_SCHEMA = {
@@ -86,12 +86,15 @@ function makeCode() {
   return c;
 }
 
-/* Normalize a submitted answers array to exactly SCENARIOS.length items. */
+/* Normalize a submitted answers array to exactly SCENARIOS.length items.
+   Answers are option indices (0-3) or null. */
 function normAnswers(arr) {
   const out = [];
   for (let i = 0; i < SCENARIOS.length; i++) {
     const a = (Array.isArray(arr) && arr[i]) || {};
-    out.push({ self: clamp(a.self), predict: clamp(a.predict) });
+    const n = SCENARIOS[i].options.length;
+    const idx = (v) => { const x = Number(v); return Number.isInteger(x) && x >= 0 && x < n ? x : null; };
+    out.push({ self: idx(a.self), predict: idx(a.predict) });
   }
   return out;
 }
@@ -220,35 +223,40 @@ async function maybeCompute(store, code) {
 
 function buildPrompt(room) {
   const A = room.host, B = room.guest;
+  const opt = (sc, i) => (i == null || !sc.options[i]) ? "(no answer)" : sc.options[i];
   const lines = [];
   SCENARIOS.forEach((sc, i) => {
     const a = (A.answers && A.answers[i]) || {};
     const b = (B.answers && B.answers[i]) || {};
-    lines.push(`UNIVERSE ${i + 1}: "${sc.name}" — ${sc.desc}`);
-    lines.push(`  Question (self): ${sc.self}`);
-    lines.push(`  Question (predict partner): ${sc.predict}`);
-    lines.push(`  ${A.name} answered about themselves: "${a.self || "(left blank)"}"`);
-    lines.push(`  ${A.name} predicted ${B.name} would say: "${a.predict || "(left blank)"}"`);
-    lines.push(`  ${B.name} answered about themselves: "${b.self || "(left blank)"}"`);
-    lines.push(`  ${B.name} predicted ${A.name} would say: "${b.predict || "(left blank)"}"`);
+    const aligned = a.self != null && a.self === b.self;
+    const aRight = a.predict != null && a.predict === b.self;
+    const bRight = b.predict != null && b.predict === a.self;
+    lines.push(`QUESTION ${i + 1} — "${sc.name}": ${sc.desc}`);
+    lines.push(`  Prompt: ${sc.self}`);
+    lines.push(`  Options: ${sc.options.map((o, k) => `(${k + 1}) ${o}`).join("   ")}`);
+    lines.push(`  ${A.name} chose: "${opt(sc, a.self)}"`);
+    lines.push(`  ${B.name} chose: "${opt(sc, b.self)}"`);
+    lines.push(`  → Same answer? ${aligned ? "YES" : "no"}`);
+    lines.push(`  ${A.name} guessed ${B.name} would pick "${opt(sc, a.predict)}" — ${aRight ? "CORRECT" : "missed"}`);
+    lines.push(`  ${B.name} guessed ${A.name} would pick "${opt(sc, b.predict)}" — ${bRight ? "CORRECT" : "missed"}`);
     lines.push("");
   });
   return `You are the Oracle of Soulstice — a poetic, emotionally intelligent reader of human bonds across the multiverse.
 
-Two souls, ${A.name} and ${B.name}, have travelled through ten alternate universes. In each, they answered a question about themselves AND predicted what their partner would say. Compatibility lives in how well their self-answers resonate with each other AND how accurately each predicted the other.
+${A.name} and ${B.name} just took a ${SCENARIOS.length}-question couple test. For each question, both chose from the SAME four answers: once honestly for themselves, and once guessing what their partner picked. Compatibility lives in two things — how well each GUESSED the other (how truly they know each other), and how often they happened to choose the SAME answer (shared tastes and values).
 
 Here is everything they revealed:
 
 ${lines.join("\n")}
 
-Your task — compare them universe by universe and deliver a verdict:
-1. A compatibility score out of 10 (may be a decimal like 7.5). Base it on emotional resonance, shared values, humor alignment, and predictive accuracy across all ten universes.
-2. A dramatic, emotional, poetic verdict (3-5 sentences) about their connection — warm, cinematic, specific to their actual answers.
-3. The names of EXACTLY TWO universes where they were most perfectly in sync.
-4. The name of EXACTLY ONE universe where they completely lost each other.
+Your task — weigh both how well they guessed each other and how aligned their own answers were across all ${SCENARIOS.length} questions, then deliver a verdict:
+1. A compatibility score out of 10 (may be a decimal like 7.5).
+2. A warm, poetic verdict of around 100 words (about 4-5 sentences) — specific to the actual choices they made (reference a couple of their answers). Keep it flowing and emotional, not a dry list.
+3. The EXACTLY TWO question titles where they were most in sync (matched answers and/or guessed each other right).
+4. The EXACTLY ONE question title where they were most out of sync.
 5. One beautiful closing line about their bond (a single sentence).
 
-Use the EXACT universe names as written above (e.g. "The Lost Island"). Address them by name where it lands emotionally. Be specific to what they actually wrote.`;
+Use the EXACT question titles as written above (e.g. "The Perfect Date"). Address them by name where it lands emotionally.`;
 }
 
 async function claudeReading(room) {
@@ -283,31 +291,31 @@ function normalizeResult(r) {
   while (synced.length < 2) synced.push(SCENARIOS[synced.length].name);
   return {
     score: Math.round(score * 10) / 10,
-    verdict: String((r && r.verdict) || "").trim() || "Two travelers, ten worlds, one quiet gravity pulling them together.",
+    verdict: String((r && r.verdict) || "").trim() || "Two travelers, many worlds, one quiet gravity pulling them together.",
     syncedUniverses: synced,
-    lostUniverse: String((r && r.lostUniverse) || SCENARIOS[5].name).trim(),
+    lostUniverse: String((r && r.lostUniverse) || SCENARIOS[SCENARIOS.length - 1].name).trim(),
     closingLine: String((r && r.closingLine) || "").trim() || "Across every universe, you keep finding your way back to each other."
   };
 }
 
-/* Server-side fallback reading if Claude is unavailable. */
+/* Server-side fallback reading if Claude is unavailable. Index-based:
+   score from how often they matched + how well they guessed each other. */
 function localReading(room) {
   const A = room.host, B = room.guest;
-  const tok = (s) => new Set(String(s || "").toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter((w) => w.length > 2));
-  const sim = (x, y) => { const a = tok(x), b = tok(y); if (!a.size || !b.size) return 0; let inter = 0; a.forEach((w) => { if (b.has(w)) inter++; }); return inter / Math.max(a.size, b.size); };
   const scored = SCENARIOS.map((sc, i) => {
     const a = (A.answers && A.answers[i]) || {}, b = (B.answers && B.answers[i]) || {};
-    const resonance = sim(a.self, b.self);
-    const predict = (sim(a.predict, b.self) + sim(b.predict, a.self)) / 2;
-    const blankPenalty = [a.self, a.predict, b.self, b.predict].filter((x) => !x).length * 0.05;
-    return { name: sc.name, score: Math.max(0, resonance * 0.6 + predict * 0.4 - blankPenalty) };
+    let s = 0;
+    if (a.self != null && a.self === b.self) s += 2;            // shared answer
+    if (a.predict != null && a.predict === b.self) s += 1;      // A guessed B
+    if (b.predict != null && b.predict === a.self) s += 1;      // B guessed A
+    return { name: sc.name, score: s };                          // 0..4 per universe
   });
   const sorted = [...scored].sort((x, y) => y.score - x.score);
-  const avg = scored.reduce((s, x) => s + x.score, 0) / scored.length;
-  const final = Math.max(1, Math.min(10, Math.round((4.5 + avg * 7) * 10) / 10));
+  const total = scored.reduce((s, x) => s + x.score, 0);
+  const final = Math.max(1, Math.min(10, Math.round((1 + (total / (scored.length * 4)) * 9) * 10) / 10));
   return {
     score: final,
-    verdict: `${A.name} and ${B.name}, the multiverse watched you wander through ten impossible worlds — and in every one, something of you reached toward the other. Where your words echoed, the stars leaned closer; where they diverged, the cosmos simply held its breath and waited. You are not two people who think alike, but two people whose differences orbit a shared centre of gravity. That, more than any perfect match, is what the universe calls a bond.`,
+    verdict: `${A.name} and ${B.name}, across every impossible world your hearts kept reaching for the same things — and where they didn't, you were still reaching for each other. You are not two people who simply think alike, but two people whose differences orbit a shared centre of gravity. That, more than any perfect match, is what the universe calls a bond.`,
     syncedUniverses: [sorted[0].name, sorted[1].name],
     lostUniverse: sorted[sorted.length - 1].name,
     closingLine: `Across every universe, ${A.name} and ${B.name} keep falling toward the same quiet light.`

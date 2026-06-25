@@ -8,6 +8,7 @@
 const SCENARIOS = [
   { name: "The Signal", desc: "You're both stranded on different planets. You sent an important transmission. They received it. It's been 3 hours. No reply.", self: "What are you doing right now?", predict: "What are THEY doing right now?", options: ["😤 Drafted four follow-ups and deleted them all", "😌 Completely unbothered — they'll reply when they reply", "📡 Already tried calling. Twice.", "🕵️ Checking their last active signal to see if they're online"] },
   { name: "The Wrong Turn", desc: "You're both in a spaceship. Navigation says go right. Your gut says left. You went left. Now you're completely lost in deep space.", self: "What happens next?", predict: "How did THEY react?", options: ["😶 Complete silence. Both staring at the controls.", "😂 Already laughing about it", "🗣️ \"I literally told you.\"", "🔄 Pretending to recalculate like it was the plan all along"] },
+  /* TESTING ONLY — 8 universes temporarily disabled. Uncomment this block (and the matching one in netlify/functions/room.js) to restore all 10.
   { name: "The Contraband", desc: "You smuggled something unnecessary onto the ship. They found it in the cargo bay.", self: "Your move?", predict: "What's THEIR move?", options: ["🙈 \"I've had this since before the mission, what are you talking about\"", "💸 Immediately justify it with a 5-point argument", "😇 Come clean immediately — I cannot lie to save my life", "🛒 \"Okay but also look what THEY smuggled last week\""] },
   { name: "The Unfinished Argument", desc: "You both went into cryo-sleep mid-argument. You just woke up. 10 years later. They're looking at you.", self: "What do you do?", predict: "What do THEY do?", options: ["😤 Pick up exactly where we left off", "😂 Laugh. We really did that.", "😶 Pretend it never happened", "💬 \"So... do you want to talk about it?\""] },
   { name: "The Repeat", desc: "You've explained the mission plan three times already. They just commed you asking the same question again.", self: "What do you do?", predict: "What do THEY do?", options: ["😤 Answer — but they're absolutely hearing about this later", "😂 Laugh, because at this point it's just funny", "😶 Answer calmly. Deep breaths. It's fine.", "📡 Send them the recording of the last three times"] },
@@ -16,6 +17,7 @@ const SCENARIOS = [
   { name: "Actually, Never Mind", desc: "You're in different galaxies. They sent: \"we need to talk.\" You've been spiralling for 20 minutes. Next message: \"actually never mind.\"", self: "What do you do?", predict: "What do THEY do?", options: ["😤 \"No. We're talking. Right now.\"", "😶 Pretend I'm fine. Internally on fire.", "😂 Laugh it off — but bring it up again later", "🚀 Go silent and wait for them to come to me"] },
   { name: "The Public Correction", desc: "You're both delegates at an intergalactic council. You said something. They corrected you in front of every alien species in the room. The chamber went silent.", self: "What happens next?", predict: "How do THEY react?", options: ["😤 I correct their correction. Immediately.", "😶 Smile and die a little inside", "😂 Laugh it off — but we are discussing this later", "🗣️ Call it out right there. In front of everyone."] },
   { name: "The Hologram", desc: "You're telling them something important via hologram. You can see they're distracted. You're still talking.", self: "What do you do?", predict: "What do THEY do?", options: ["😤 Stop transmitting completely and wait", "😶 Finish the story to nobody", "🗣️ \"Are you even listening to me?\"", "📡 Go offline. Two can play."] }
+  */
 ];
 
 const SCENE_EMOJI = ["📡","🧭","📦","❄️","🔁","🌧️","👂","📩","😳","🛰️"];
@@ -150,7 +152,7 @@ function buildNameScreen() {
       </div>
 
       <div class="reveal-up d4"><button class="btn btn-glow" id="continueBtn" disabled>Continue 💞</button></div>
-      <div class="footnote reveal-up d5">Played on two phones, together or apart</div>
+      <div class="footnote reveal-up d5">Played on two phones, together or apart<br/>Developed with 💗 by Benazir</div>
     </div>
   `);
 

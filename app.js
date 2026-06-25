@@ -39,6 +39,14 @@ const state = {
   pollTimer: null
 };
 
+/* ---------- Session persistence (survive a refresh) ---------- */
+const SS_KEY = 'soulsync_session';
+function saveSession() {
+  try { localStorage.setItem(SS_KEY, JSON.stringify({ me: state.me, code: state.code, role: state.role, scene: state.scene, answers: state.answers, submitted: state.submitted })); } catch (e) {}
+}
+function clearSession() { try { localStorage.removeItem(SS_KEY); } catch (e) {} }
+function loadSession() { try { return JSON.parse(localStorage.getItem(SS_KEY) || 'null'); } catch (e) { return null; } }
+
 /* ---------- DOM helpers ---------- */
 const app = document.getElementById('app');
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -126,7 +134,7 @@ function buildNameScreen() {
     <div class="center-stack">
       <div class="reveal-up d1" style="text-align:center;">
         <div class="brand" style="margin-bottom:12px;">A test of two hearts</div>
-        <span class="title-orbit"><h1 class="title">Soulstice</h1><span class="spark">💕</span></span>
+        <span class="title-orbit"><h1 class="title">SoulSync</h1><span class="spark">💕</span></span>
       </div>
       <p class="tagline reveal-up d2">How well do you really<br/>know each other?</p>
 
@@ -160,6 +168,7 @@ function buildNameScreen() {
   cont.addEventListener('click', () => {
     if (cont.disabled) return;
     startMusicIfArmed();
+    saveSession();
     buildChooseScreen();
     showScreen('screen-choose');
   });
@@ -203,6 +212,7 @@ async function doCreate() {
   try {
     const r = await api('create', { name: state.me.name, avatar: state.me.avatar });
     state.code = r.roomCode; state.role = 'host'; state.partner = null;
+    saveSession();
     buildLobby(); showScreen('screen-lobby');
   } catch (e) { toast(netMessage(e)); if (btn) btn.style.pointerEvents = ''; }
 }
@@ -240,6 +250,7 @@ function buildJoinScreen() {
     try {
       const r = await api('join', { code: codeInput.value.trim(), name: state.me.name, avatar: state.me.avatar });
       state.code = r.roomCode; state.role = 'guest'; partnerFrom(r.view);
+      saveSession();
       buildLobby(); showScreen('screen-lobby');
     } catch (e) { toast(netMessage(e)); joinBtn.disabled = false; }
   });
@@ -382,6 +393,7 @@ function renderScene() {
     cur[g] = i;
     card.querySelectorAll(`.opt[data-group="${g}"]`).forEach(b => b.classList.toggle('sel', +b.dataset.i === i));
     state.answers[state.scene] = { self: cur.self, predict: cur.predict };
+    saveSession();
     if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
     refresh();
   }));
@@ -392,8 +404,9 @@ function renderScene() {
   nextBtn.addEventListener('click', () => {
     if (nextBtn.disabled) return;
     state.answers[state.scene] = { self: cur.self, predict: cur.predict };
+    saveSession();
     updateProgress(s, state.scene + 1);
-    if (!isLast) { state.scene++; setTimeout(renderScene, 130); return; }
+    if (!isLast) { state.scene++; saveSession(); setTimeout(renderScene, 130); return; }
     buildWaitScreen(); showScreen('screen-wait'); submitAndWait();
   });
 }
@@ -422,7 +435,7 @@ async function submitAndWait() {
   for (let attempt = 0; attempt < 3 && !state.submitted; attempt++) {
     try {
       const r = await api('submit', { code: state.code, role: state.role, answers: state.answers });
-      state.submitted = true; partnerFrom(r.view);
+      state.submitted = true; partnerFrom(r.view); saveSession();
       if (r.view.ready) { finishWithResult(r.view.result); return; }
     } catch (e) {
       if (attempt === 2) setWait('The connection wavered…', 'Trying again');
@@ -459,7 +472,8 @@ function normalizeResult(r) {
     verdict: String((r && r.verdict) || "").trim() || "Two hearts, learning each other a little more with every answer.",
     syncedUniverses: synced,
     lostUniverse: String((r && r.lostUniverse) || SCENARIOS[SCENARIOS.length - 1].name).trim(),
-    closingLine: String((r && r.closingLine) || "").trim() || "You keep finding your way back to each other."
+    closingLine: String((r && r.closingLine) || "").trim() || "You keep finding your way back to each other.",
+    details: Array.isArray(r && r.details) ? r.details : []
   };
 }
 
@@ -491,10 +505,13 @@ function buildRevealScreen() {
     <div class="uni-section" id="uniSection"></div>
     <div class="closing-line" id="closingLine">"${esc(state.result.closingLine)}"</div>
 
+    <div id="detailSection"></div>
+
     <div class="reveal-actions" id="revealActions">
       <button class="btn" id="shareBtn">Share Our Result 💞</button>
       <button class="btn btn-soft" id="playAgainBtn">Play Again</button>
     </div>
+    <div class="footnote" style="margin-top:18px;">Developed with 💗 by Benazir</div>
   `);
   $('#shareBtn', s).addEventListener('click', shareResult);
   $('#playAgainBtn', s).addEventListener('click', resetAll);
@@ -507,7 +524,34 @@ function runRevealSequence() {
   const verdictMs = 2300 + r.verdict.length * 22 + 600;
   setTimeout(() => buildUniverseRows(r), verdictMs);
   setTimeout(() => { $('#closingLine', s).classList.add('show'); particleExplosion(0.5); }, verdictMs + 1500);
-  setTimeout(() => $('#revealActions', s).classList.add('show'), verdictMs + 2500);
+  setTimeout(() => buildDetailRows(r), verdictMs + 1900);
+  setTimeout(() => $('#revealActions', s).classList.add('show'), verdictMs + 2900);
+}
+
+/* Side-by-side: what you answered vs what your partner answered. */
+function buildDetailRows(r) {
+  const wrap = document.getElementById('detailSection');
+  if (!wrap || !r.details || !r.details.length) return;
+  const meKey = state.role === 'host' ? 'host' : 'guest';
+  const otherKey = meKey === 'host' ? 'guest' : 'host';
+  const pname = esc(state.partner && state.partner.name ? state.partner.name : 'Them');
+  let html = '<div class="detail-heading">Side by side 💞</div>';
+  r.details.forEach((d, i) => {
+    const mine = d[meKey] || {}, theirs = d[otherKey] || {};
+    const myGuessRight = (meKey === 'host') ? d.hostRight : d.guestRight;
+    html += `
+      <div class="detail">
+        <div class="d-head"><span class="d-emoji">${SCENE_EMOJI[i] || '✨'}</span><span class="d-name">${esc(d.name)}</span>${d.same ? '<span class="d-match">matched 💞</span>' : ''}</div>
+        <div class="d-row"><span class="who">You</span><span class="ans">${esc(mine.self)}</span></div>
+        <div class="d-row"><span class="who">${pname}</span><span class="ans">${esc(theirs.self)}</span></div>
+        <div class="d-guess">You guessed they'd pick "${esc(mine.predict)}" — ${myGuessRight ? '<b class="ok">spot on ✓</b>' : '<b class="no">not quite ✗</b>'}</div>
+      </div>`;
+  });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.detail').forEach((el, i) => {
+    el.style.opacity = 0; el.style.transform = 'translateY(10px)';
+    setTimeout(() => { el.style.transition = 'opacity .5s, transform .5s'; el.style.opacity = 1; el.style.transform = 'none'; }, 200 + i * 90);
+  });
 }
 
 function animateScore(target) {
@@ -544,9 +588,9 @@ function buildUniverseRows(r) {
 /* ---------- Share ---------- */
 function shareResult() {
   const r = state.result, me = state.me, partner = state.partner || { name: 'Partner' };
-  const text = `💞 Soulstice 💞\n${me.name} & ${partner.name}\nWe know each other ${r.score}/10\n\n"${r.closingLine}"`;
+  const text = `💞 SoulSync 💞\n${me.name} & ${partner.name}\nWe know each other ${r.score}/10\n\n"${r.closingLine}"`;
   const done = () => toast('Copied 💗');
-  if (navigator.share) navigator.share({ title: 'Soulstice', text }).catch(() => copyText(text, done));
+  if (navigator.share) navigator.share({ title: 'SoulSync', text }).catch(() => copyText(text, done));
   else copyText(text, done);
 }
 function copyText(text, cb) {
@@ -563,6 +607,7 @@ function legacyCopy(text, cb) {
 /* ---------- Reset ---------- */
 function resetAll() {
   stopPoll();
+  clearSession();
   const keep = state.me.avatar;
   state.me = { name: "", avatar: keep };
   state.partner = null; state.code = ""; state.role = ""; state.scene = 0; state.answers = []; state.submitted = false; state.result = null;
@@ -706,9 +751,32 @@ musicBtn.addEventListener('click', () => { musicArmed = true; toggleMusic(); });
 /* ============================================================
    Boot
    ============================================================ */
-function init() {
+/* Try to restore a saved session after a refresh. Returns true if it resumed. */
+async function tryRestore(saved) {
+  try {
+    const r = await api('status', { code: saved.code });   // throws if the room is gone
+    state.me = saved.me; state.code = saved.code; state.role = saved.role;
+    state.answers = Array.isArray(saved.answers) ? saved.answers : [];
+    state.scene = saved.scene || 0; state.submitted = !!saved.submitted;
+    partnerFrom(r.view);
+
+    if (r.view.ready && r.view.result) { finishWithResult(r.view.result); return true; }
+    if (state.submitted) { buildWaitScreen(); showScreen('screen-wait'); submitAndWait(); return true; }
+    if (state.answers.filter(Boolean).length > 0) { buildQuizScreen(); showScreen('screen-quiz'); renderScene(); return true; }
+    buildLobby(); showScreen('screen-lobby'); return true;
+  } catch (e) {
+    clearSession();
+    return false;
+  }
+}
+
+async function init() {
   initPetals(); drawPetals();
-  state.me.avatar = newSeed();
+  const saved = loadSession();
+  state.me.avatar = (saved && saved.me && saved.me.avatar) ? saved.me.avatar : newSeed();
+  if (saved && saved.code && saved.role && saved.me && saved.me.name) {
+    if (await tryRestore(saved)) return;
+  }
   buildNameScreen(); showScreen('screen-name');
 }
 init();

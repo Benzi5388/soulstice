@@ -57,10 +57,14 @@ const RESULT_SCHEMA = {
    testing works. (The dev function process persists between requests, so a
    room created in one tab is visible to another during the session.) */
 let __memStore = null;
+let BLOBS_OK = false;
 function roomStore() {
   try {
-    return getStore(STORE);
+    const s = getStore(STORE);
+    BLOBS_OK = true;
+    return s;
   } catch (e) {
+    BLOBS_OK = false;
     if (!__memStore) {
       const m = new Map();
       __memStore = {
@@ -122,6 +126,9 @@ export const handler = async (event) => {
 
   const action = body.action;
   const store = roomStore();
+  const h = event.headers || {};
+  const origin = process.env.URL ||
+    (((h['x-forwarded-proto'] || h['X-Forwarded-Proto'] || 'https')) + '://' + (h.host || h.Host || 'localhost:8888'));
 
   try {
     if (action === "create") {
@@ -173,8 +180,8 @@ export const handler = async (event) => {
       room[role].submitted = true;
       await store.setJSON(code, room);
 
-      // If this was the last submission, compute the reading now.
-      await maybeCompute(store, code);
+      // If this was the last submission, kick off the reading.
+      await ensureCompute(code, origin);
 
       const fresh = await store.get(code, { type: "json" });
       return json(200, { ok: true, view: publicView(fresh || room) });
@@ -185,9 +192,9 @@ export const handler = async (event) => {
       let room = await store.get(code, { type: "json" });
       if (!room) return json(404, { error: "Room not found" });
 
-      // Fallback compute (covers the rare case where neither submit triggered it).
-      if (room.host && room.host.submitted && room.guest && room.guest.submitted && !room.result && !room.computing) {
-        await maybeCompute(store, code);
+      // Make sure a compute is in flight (covers a missed/failed trigger).
+      if (room.host && room.host.submitted && room.guest && room.guest.submitted && !room.result) {
+        await ensureCompute(code, origin);
         room = await store.get(code, { type: "json" }) || room;
       }
       return json(200, { view: publicView(room) });
@@ -199,26 +206,55 @@ export const handler = async (event) => {
   }
 };
 
-/* Compute the reading once both players have submitted. */
-async function maybeCompute(store, code) {
-  let room = await store.get(code, { type: "json" });
+/* Trigger the reading once both players have submitted. On production
+   (Netlify Blobs available) the slow Claude call runs in a BACKGROUND
+   function so it isn't killed by the 10s sync-function timeout. Locally
+   (in-memory store, no shared background process) it runs inline. */
+async function ensureCompute(code, origin) {
+  const store = roomStore();
+  const room = await store.get(code, { type: "json" });
   if (!room) return;
-  if (room.result || room.computing) return;
+  if (room.result) return;
   if (!(room.host && room.host.submitted && room.guest && room.guest.submitted)) return;
+  const inFlight = room.computing && room.computeStartedAt && (Date.now() - room.computeStartedAt < 15000);
+  if (inFlight) return;
 
-  // claim
   room.computing = true;
+  room.computeStartedAt = Date.now();
   await store.setJSON(code, room);
 
+  if (BLOBS_OK) {
+    try {
+      await fetch(`${origin}/.netlify/functions/compute-background`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+        signal: AbortSignal.timeout(4000)
+      });
+    } catch (e) {
+      // Hand-off failed — last resort, run it inline.
+      try { await runComputeForRoom(code); } catch (e2) {}
+    }
+  } else {
+    await runComputeForRoom(code);
+  }
+}
+
+/* The heavy lifting: call Claude (or fall back) and store the result.
+   Exported so the background function can run it. */
+export async function runComputeForRoom(code) {
+  const store = roomStore();
+  const room = await store.get(code, { type: "json" });
+  if (!room || room.result) return;
   let result;
   try { result = await claudeReading(room); }
-  catch (e) { console.error("[soulstice] claude failed:", e && (e.stack || e.message)); result = localReading(room); }
-
-  const fresh = await store.get(code, { type: "json" }) || room;
-  fresh.result = result;
-  fresh.computing = false;
-  fresh.computedAt = Date.now();
-  await store.setJSON(code, fresh);
+  catch (e) { result = localReading(room); }
+  result.details = buildDetails(room);
+  const latest = await store.get(code, { type: "json" }) || room;
+  latest.result = result;
+  latest.computing = false;
+  latest.computedAt = Date.now();
+  await store.setJSON(code, latest);
 }
 
 function buildPrompt(room) {
@@ -281,6 +317,23 @@ async function claudeReading(room) {
   catch (e) { const m = block.text.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : null; }
   if (!parsed) throw new Error("parse");
   return normalizeResult(parsed);
+}
+
+/* Per-question breakdown so each player can see both answers afterwards. */
+function buildDetails(room) {
+  const A = room.host, B = room.guest;
+  return SCENARIOS.map((sc, i) => {
+    const a = (A.answers && A.answers[i]) || {}, b = (B.answers && B.answers[i]) || {};
+    const t = (idx) => (idx == null || !sc.options[idx]) ? "—" : sc.options[idx];
+    return {
+      name: sc.name,
+      host: { self: t(a.self), predict: t(a.predict) },
+      guest: { self: t(b.self), predict: t(b.predict) },
+      same: a.self != null && a.self === b.self,
+      hostRight: a.predict != null && a.predict === b.self,
+      guestRight: b.predict != null && b.predict === a.self
+    };
+  });
 }
 
 function normalizeResult(r) {

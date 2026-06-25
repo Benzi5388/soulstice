@@ -1,9 +1,9 @@
 {
-  "name": "soulstice",
+  "name": "soulsync",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Soulstice — a cosmic compatibility ritual across ten universes (cross-device).",
+  "description": "SoulSync — how well do you know each other? A cross-device couple test.",
   "dependencies": {
     "@netlify/blobs": "^8.1.0"
   }
